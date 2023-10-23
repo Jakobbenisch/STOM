@@ -1,0 +1,172 @@
+###check for gaps
+
+load("C:/Users/Jakob/Desktop/paper sampling/jakob_300.RData")
+
+data_test=data
+for(i in 1:5){
+  data_test[[i]]=cbind(data[[i]],data_Q[[i]])
+  names(data_test[[i]])<-c("no3n_mg.l","cl_mg.l","oxygen_mg.l","discharge_m3.s")}
+
+
+gaps=list()
+results=list()
+dates=list()
+
+for(i in 1:5){
+  gaps[[i]]=Add.NA(data_test[[i]],by = as.numeric(index(data_test[[i]][2,1])-index(data_test[[i]][1,1]))*60)
+  results[[i]]=lapply(split.xts(gaps[[i]],f="years"),function(x) colSums(is.na(x))/dim(x)[1])
+  dates[[i]]=lapply(split.xts(data_test[[i]],f = "years"),function(x) index(x)[1])}
+
+for(i in 1:5){
+  dates[[i]]=append(dates[[i]],as.POSIXct(dates[[i]][[length(dates[[i]])]]+365*24*60*60,origin = "1970-01-01 00:00:00", tzone = "Etc/GMT-1")) #there is no proper last time
+}
+
+plot_data=list()
+timesteps=c(rep(600,3),rep(60,2))
+
+for(i in 1:5){plot_data[[i]]=na.locf(Add.NA(xts(rbind(do.call(rbind,lapply(results[[i]],"*",100)),c(NA,NA,NA,NA)),
+                                                order.by = as.POSIXct(do.call(rbind,dates[[i]]),origin = "1970-01-01 00:00:00", tzone = "Etc/GMT-1")),timesteps[i]))
+names(plot_data[[i]])<-c("color_no3n_mg.l","color_cl_mg.l","color_oxygen_mg.l","color_discharge_m3.s")}
+
+
+#####data for evaluation in the paper:
+###mean missing data
+col_mean=list()
+for (i in 1:5){col_mean[[i]]=do.call("rbind",results[[i]])}
+col_mean=lapply(col_mean, colMeans) ##every year
+col_mean=do.call("rbind", col_mean) ##total mean
+###max gap
+col_max=list()
+for (i in 1:5){col_max[[i]]=do.call("rbind",results[[i]])}
+col_max=lapply(col_max, function(x){apply(x, MARGIN=c(2), max)}) ##max yearly missing data 
+
+
+
+#cross check
+test_xts=c()
+data_xts=list()
+
+for (i in 1:5){
+  test_xts=data_test[[i]]
+  test_xts=cbind(test_xts,Add.NA(test_xts[,1],timesteps[i]))[,-5]
+  bool=is.na(test_xts)
+  
+  test_xts$no3n_mg.l=1+i
+  test_xts$cl_mg.l=1.2+i
+  test_xts$oxygen_mg.l=1.4+i
+  test_xts$discharge_m3.s=1.6+i
+  
+  test_xts[bool]<-NA
+  
+  data_xts[[i]]<-test_xts
+  
+}
+
+data_xts_1=list()
+
+for(i in 1:5){data_xts_1[[i]]=cbind(data_xts[[i]],plot_data[[i]])
+data_xts_1[[i]]=data_xts_1[[i]][endpoints(data_xts_1[[i]],"hour",1)]}
+#data_xts_1[[i]]=data_xts_1[[i]][endpoints(data_xts_1[[i]],"day",4)]}##to be quick
+
+
+###data is too big to be plotted, need resampling:
+test=list()
+
+for(i in 1:5){
+  test[[i]]=data.frame(date=index(data_xts_1[[i]]),coredata(data_xts_1[[i]]))
+}
+
+t_breaks = seq(from = ymd_hms('2008-01-02 00:00:00',tz="Etc/GMT-1"), to = ymd_hms('2022-01-02 00:00:00',tz="Etc/GMT-1"), by = '1 year')
+
+g2 <- ggplot() +
+  
+  geom_line(data=test[[1]], aes(x=date, y=no3n_mg.l,color=color_no3n_mg.l), linetype=1, size=4) +
+  geom_line(data=test[[1]], aes(x=date, y=cl_mg.l,color=color_cl_mg.l), linetype=1, size=4) +
+  geom_line(data=test[[1]], aes(x=date, y=oxygen_mg.l,color=color_oxygen_mg.l), linetype=1, size=4) +
+  geom_line(data=test[[1]], aes(x=date, y=discharge_m3.s,color=color_discharge_m3.s), linetype=1, size=4) +
+  
+  
+  geom_line(data=test[[2]], aes(x=date, y=no3n_mg.l,color=color_no3n_mg.l), linetype=1, size=4) +
+  geom_line(data=test[[2]], aes(x=date, y=cl_mg.l,color=color_cl_mg.l), linetype=1, size=4) +
+  geom_line(data=test[[2]], aes(x=date, y=oxygen_mg.l,color=color_oxygen_mg.l), linetype=1, size=4) +
+  geom_line(data=test[[2]], aes(x=date, y=discharge_m3.s,color=color_discharge_m3.s), linetype=1, size=4) +
+  
+  
+  geom_line(data=test[[3]], aes(x=date, y=no3n_mg.l,color=color_no3n_mg.l), linetype=1, size=4) +
+  geom_line(data=test[[3]], aes(x=date, y=cl_mg.l,color=color_cl_mg.l), linetype=1, size=4) +
+  geom_line(data=test[[3]], aes(x=date, y=oxygen_mg.l,color=color_oxygen_mg.l), linetype=1, size=4) +
+  geom_line(data=test[[3]], aes(x=date, y=discharge_m3.s,color=color_discharge_m3.s), linetype=1, size=4) +
+  
+  
+  geom_line(data=test[[4]], aes(x=date, y=no3n_mg.l,color=color_no3n_mg.l), linetype=1, size=4) +
+  geom_line(data=test[[4]], aes(x=date, y=cl_mg.l,color=color_cl_mg.l), linetype=1, size=4) +
+  geom_line(data=test[[4]], aes(x=date, y=oxygen_mg.l,color=color_oxygen_mg.l), linetype=1, size=4) +
+  geom_line(data=test[[4]], aes(x=date, y=discharge_m3.s,color=color_discharge_m3.s), linetype=1, size=4) +
+  
+  
+  geom_line(data=test[[5]], aes(x=date, y=no3n_mg.l,color=color_no3n_mg.l), linetype=1, size=4) +
+  geom_line(data=test[[5]], aes(x=date, y=cl_mg.l,color=color_cl_mg.l), linetype=1, size=4) +
+  geom_line(data=test[[5]], aes(x=date, y=oxygen_mg.l,color=color_oxygen_mg.l), linetype=1, size=4) +
+  geom_line(data=test[[5]], aes(x=date, y=discharge_m3.s,color=color_discharge_m3.s), linetype=1, size=4) +
+  
+  
+  annotate(geom="text",hjust = 0,size=4,fontface="bold",
+           x= c(rep(as.POSIXct("2008-02-01"),3),rep(as.POSIXct("2017-01-01"),2)),
+           y=c(2.73,3.73,4.73,5.73,6.73), 
+           label=c("Mulde / Bad Düben","Elbe / Schmilka","Neiße / Görlitz", "Lockwitzbach / MS 6","Lockwitzbach / MS 4"))+
+  
+  annotate(geom="text",hjust = 0,size=3.5,fontface="italic",
+           x= c(as.POSIXct("2016-01-01")),
+           y=c(6.02,6.202,6.402,6.602), 
+           label=c("Nitrate","Cholride","Oxygen","Discharge"))+
+  scale_x_datetime(breaks = t_breaks,date_labels ="%Y")+
+  theme_minimal(base_family = "Poppins")+
+  scale_color_gradientn("Yearly data gaps \n in %", 
+                        colors=c("blue","deepskyblue","yellow","red"),
+                       guide ="colorbar",
+                       values=rescale(c(0,15,30,60)),
+                       limits = c(0,60))+ 
+  theme(panel.grid.major.y =  element_blank(),
+        legend.direction = "horizontal",
+        panel.grid.minor.y =  element_blank(),
+        panel.grid.minor.x =  element_blank(),
+        legend.position=c(.3,.83),
+        legend.background = element_rect(fill="white",size=0.5, linetype="blank"),
+        legend.key.height= unit(0.6, 'cm'),
+        legend.key.width= unit(1.1, 'cm'),
+        legend.title = element_text(size=13),
+        legend.text = element_text(size=9),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(size = 13)
+  )
+
+
+###export as plot with 1200*600 or bigger
+
+setwd("C:/Users/Jakob/Desktop/paper sampling/plots")
+
+
+ggsave(filename="available data_2.png",
+       bg="white",
+       width=12,
+       height=6)
+units="cm"
+
+
+dev.off()
+
+
+
+
+#####data for evaluation in the paper:
+###mean missing data
+col_mean=list()
+for (i in 1:5){col_mean[[i]]=do.call("rbind",results[[i]])}
+col_mean=lapply(col_mean, colMeans) ##every year
+col_mean=do.call("rbind", col_mean) ##total mean
+###max gap
+col_max=list()
+for (i in 1:5){col_max[[i]]=do.call("rbind",results[[i]])}
+col_max=lapply(col_max, function(x){apply(x, MARGIN=c(2), max)}) ##max yearly missing data 
