@@ -1,0 +1,105 @@
+####functions for modelling STOM sampling
+
+sampling_period=function(xts,sampling_duration=7,threshhold=.75,period=1,threshold_mean_min=mean){
+  check_1=difftime(index(xts)[2],index(xts)[1],units ="mins")
+  thresh=(60/as.numeric(check_1))*24*sampling_duration*threshhold
+  
+  sampledata1=split.xts(xts,f="months",drop = F,k=period) #split the dataset in periods for finding starting points
+  sampledate=list()
+  sampleperiod=list()
+  
+  for(i in 1:length(sampledata1)) {
+    sample_found = FALSE
+    count = 0
+    
+    while (!sample_found & count < 10) {
+      sampledate[[i]]=sample(index(sampledata1[[i]])-3600*24*sampling_duration,size = 1) #find starting points in every period
+      #print(sampledate[[i]])
+      sampleperiod[[i]]=CutTimeSeries(sampledata1[[i]],sampledate[[i]],sampledate[[i]]+3600*24*sampling_duration)
+      count = count + 1
+      
+      if(length(sampleperiod[[i]]) > thresh) {
+        sample_found = TRUE
+      }
+    }
+    if(!sample_found) {
+      #print(sampledate[[i]])
+      #print(paste0(i," ",length(sampleperiod[[i]])))
+    }
+  }
+  
+  samples=list()
+  
+  samples=lapply(split.xts(do.call("rbind",sampleperiod),f="years",k=1),threshold_mean_min,na.rm =TRUE) ##you get: a list for every year with the sampling periods of this year and then a function is applied!
+  
+  return(unlist(samples))}
+
+###establish grab sampling fuction
+
+
+probs_ogvw=c(mean,mean,min)
+
+mymapfunc <- function(x) sampling_period(x, period = a, sampling_duration = b, threshold_mean_min = probs_ogvw[[y]])
+colSd <- function (x, na.rm=FALSE) apply(X=x, MARGIN=2, FUN=sd, na.rm=na.rm)
+
+simulated_consecutive_sampling=c(
+  baddueben_cons=list(c(list(),list(),list())),
+  schmilka_cons=list(c(list(),list(),list())),
+  goerlitz_cons=list(c(list(),list(),list())),
+  ms6_cons=list(c(list(),list(),list())),
+  ms4_cons=list(c(list(),list(),list())))
+
+dupliz=list()
+dupliz_extended=list()
+finalresults_mean=list()
+finalresults_sd=finalresults_mean
+finalresults_diff=finalresults_mean
+duration_days=list()
+results=list()
+testdata2=list()
+
+for(i in 1:21){duration_days[[i]]=simulated_consecutive_sampling}
+intervalls=c("1 months", "2 months", "3 months", "quarterly","5 months","half year")
+
+
+for(i in 1:6){
+  results[[i]]=list(duration_days)
+  for(dd in 1:length(duration_days)){
+    results[[i]][[dd]]=list(1:3)
+  }
+}
+
+
+testdata3=testdata2
+results_1=results
+results_2=results
+results_3=results
+
+
+start.time <- Sys.time()
+for(i in 1:5){
+  for(y in 1:3){
+    for(a in 1:length(intervalls)){
+      for(b in 1:length(duration_days)){
+        dupliz=data[[i]][,y]
+        for(u in 1:500){dupliz_extended[[u]]=dupliz}###vorischt, vorher falsch indexiert! 
+        testdata2=map(dupliz_extended, mymapfunc)
+        testdata3=testdata2#just to create another list with similar properties
+        for(u in 1:500){testdata3[[u]]=abs(as.numeric(true_values_ogv[[i]][[y]])-testdata2[[u]])} #abs differeces here
+        #mean() ignores Inf, colMean doesnt and keeps Inf - take care!
+        testdata2_no_inf=do.call("rbind",testdata2)
+        testdata2_no_inf[is.infinite(testdata2_no_inf)]<-NA
+        testdata3_no_inf=do.call("rbind",testdata3)
+        testdata3_no_inf[is.infinite(testdata3_no_inf)]<-NA
+        results_1[[a]][[b]][[y]]=colMeans(testdata2_no_inf,na.rm=T)
+        results_2[[a]][[b]][[y]]=colSd(testdata2_no_inf,na.rm=T)
+        results_3[[a]][[b]][[y]]=colMeans(testdata3_no_inf,na.rm=T)}}}
+  print(y)
+  finalresults_mean[[i]]=results_1
+  finalresults_sd[[i]]=results_2
+  finalresults_diff[[i]]=results_3}
+end.time <- Sys.time()
+time.taken <- end.time - start.time
+time.taken
+
+
