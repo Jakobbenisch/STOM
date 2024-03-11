@@ -1,0 +1,30 @@
+### Simulate grab sampling with example
+
+probs_ogvw=c(mean,mean,min)
+
+bful_sampling=function(xts,probability){
+  output=c()
+  xts=xts[.indexwday(xts) %in% 1:5]
+  #output=unlist(lapply(split.xts(apply.monthly(xts,sample,size=1),f="years"),probability,na.rm =TRUE))}
+  output=unlist(lapply(split.xts(apply.monthly(xts['T09:00:00/T17:00:00'],sample,size=1),f="years"),probability,na.rm =TRUE))}
+
+
+simulated_grab_sampling_mean=c(
+  baddueben_grab=list(c(list(),list(),list())),
+  schmilka_grab=list(c(list(),list(),list())),
+  goerlitz_grab=list(c(list(),list(),list())),
+  ms6_grab=list(c(list(),list(),list())),
+  ms4_grab=list(c(list(),list(),list())))
+simulated_grab_sampling_sd=simulated_grab_sampling_mean
+
+
+data_temp=list()
+
+for(measuring_station in 1:5){
+  for(parameter in 1:3){
+    for(i in 1:500){
+      data_temp[[i]]=bful_sampling(data[[measuring_station]][,parameter],probability=probs_ogvw[[parameter]])}
+    simulated_grab_sampling_mean[[measuring_station]][[parameter]]=colMeans(do.call("rbind",data_temp),na.rm=T)
+    simulated_grab_sampling_sd[[measuring_station]][[parameter]]=colSd(do.call("rbind",data_temp),na.rm=T)}}
+
+
