@@ -1,0 +1,5 @@
+###function for calculating true value
+true_value=function(xts,probability){
+  true_value=as.numeric(unlist(apply.yearly(xts,quantile,probs=probability,na.rm =TRUE)))
+}
+
