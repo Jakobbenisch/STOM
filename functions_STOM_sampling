@@ -34,11 +34,12 @@ sampling_period=function(xts,sampling_duration=7,threshhold=.75,period=1,thresho
   
   return(unlist(samples))}
 
-###establish grab sampling fuction
 
+
+
+###Running STOM function
 
 probs_ogvw=c(mean,mean,min)
-
 mymapfunc <- function(x) sampling_period(x, period = a, sampling_duration = b, threshold_mean_min = probs_ogvw[[y]])
 colSd <- function (x, na.rm=FALSE) apply(X=x, MARGIN=2, FUN=sd, na.rm=na.rm)
 
