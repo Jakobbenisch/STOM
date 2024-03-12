@@ -77,27 +77,27 @@ results_3=results
 
 
 start.time <- Sys.time()
-for(i in 1:5){
-  for(y in 1:3){
+for(measuring_station in 1:5){
+  for(parameter in 1:3){
     for(a in 1:length(intervalls)){
       for(b in 1:length(duration_days)){
-        dupliz=data[[i]][,y]
-        for(u in 1:500){dupliz_extended[[u]]=dupliz}###vorischt, vorher falsch indexiert! 
+        dupliz=data[[measuring_station]][,parameter]
+        for(u in 1:500){dupliz_extended[[u]]=dupliz}
         testdata2=map(dupliz_extended, mymapfunc)
         testdata3=testdata2#just to create another list with similar properties
-        for(u in 1:500){testdata3[[u]]=abs(as.numeric(true_values_ogv[[i]][[y]])-testdata2[[u]])} #abs differeces here
+        for(u in 1:500){testdata3[[u]]=abs(as.numeric(true_values_ogv[[measuring_station]][[parameter]])-testdata2[[u]])} #abs differeces here
         #mean() ignores Inf, colMean doesnt and keeps Inf - take care!
         testdata2_no_inf=do.call("rbind",testdata2)
         testdata2_no_inf[is.infinite(testdata2_no_inf)]<-NA
         testdata3_no_inf=do.call("rbind",testdata3)
         testdata3_no_inf[is.infinite(testdata3_no_inf)]<-NA
-        results_1[[a]][[b]][[y]]=colMeans(testdata2_no_inf,na.rm=T)
-        results_2[[a]][[b]][[y]]=colSd(testdata2_no_inf,na.rm=T)
-        results_3[[a]][[b]][[y]]=colMeans(testdata3_no_inf,na.rm=T)}}}
-  print(y)
-  finalresults_mean[[i]]=results_1
-  finalresults_sd[[i]]=results_2
-  finalresults_diff[[i]]=results_3}
+        results_1[[a]][[b]][[parameter]]=colMeans(testdata2_no_inf,na.rm=T)
+        results_2[[a]][[b]][[parameter]]=colSd(testdata2_no_inf,na.rm=T)
+        results_3[[a]][[b]][[parameter]]=colMeans(testdata3_no_inf,na.rm=T)}}}
+  print(parameter)
+  finalresults_mean[[measuring_station]]=results_1
+  finalresults_sd[[measuring_station]]=results_2
+  finalresults_diff[[measuring_station]]=results_3}
 end.time <- Sys.time()
 time.taken <- end.time - start.time
 time.taken
