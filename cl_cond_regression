@@ -1,0 +1,78 @@
+
+r2ww <- function(x){
+ SSe <- sum((x$w*x$resid)^2); #the residual sum of squares is weighted
+ observed <- x$resid+x$fitted;
+ SSt <- sum((x$w*(observed-mean(observed)))^2); #the total sum of squares is weighted      
+ value <- 1-SSe/SSt;
+ return(value);
+ }
+
+
+
+goerl_plot=data.frame(coredata(goerl),station=rep("Görlitz",n=ncol(goerl)))
+schmilka_plot=data.frame(coredata(schmilka),station=rep("Schmilka",n=ncol(schmilka)))
+dueben_plot=data.frame(coredata(dueben),station=rep("Bad Düben",n=ncol(dueben)))
+
+works=rbind(goerl_plot,schmilka_plot,dueben_plot)
+
+bp = ggplot(works,aes(x=cond,y=cl,color=station))+
+  geom_point(size=0.9)+
+  geom_smooth(method = "rlm",se=F,fullrange = T,size=1.3)+
+  facet_wrap(vars(station),nrow=2,scale="free")+
+  scale_color_manual(values=c("#e38578","#a7beae","#b7bb77"))+
+  theme_minimal(base_family = "Poppins")+
+  labs(x="Electrical Conductivity [microsiemens/cm]", y="Chlorid [mg/l]")+
+  theme(legend.position="none",strip.text = element_text(hjust = -.01,vjust = .01,size = 18),text = element_text(size = 16),
+        axis.title=element_text(size=14),
+        axis.title.y = element_text(vjust = +2.7,),
+        axis.title.x = element_text(vjust = -0.1,hjust=-0.03))
+
+#e38578 (mulde), #e7e8d1(elbe), #a7beae (neise), #987db7(lockwitz)
+
+bp
+
+setwd("C:/Users/Jakob/Desktop/paper sampling")
+
+png(filename="regression cl cond.png",
+    units="mm",
+    width=200,
+    height=200,
+    res=600)
+bp
+
+dev.off()
+
+
+graphs=list(goerl_plot,dueben_plot,schmilka_plot)
+colors=c("#a7beae","#e38578","#b7bb77")
+titles=c("Neiße / Görlitz","Mulde / Bad Düben","Elbe / Schmilka")
+regression_plot=list()
+for(station in 1:3){
+  model_lm=lm(cl ~ cond, data=graphs[[station]])
+  temp_var <- predict(model_lm, interval="prediction")
+  graphs[[station]]=cbind(graphs[[station]],temp_var)
+  regression_plot[[station]]=ggplot(data=graphs[[station]],aes(x=cond,y=cl))+
+                                    geom_point(size=0.9,col=colors[station])+
+                                    geom_smooth(method = "lm",se=T,fullrange = T,size=1,col=colors[station])+
+                                    geom_line(aes(y=lwr), col=colors[station], linetype = "dashed")+
+                                    geom_line(aes(y=upr), col=colors[station], linetype = "dashed")+
+                                    theme_minimal()+
+                                    labs(x="", y="")+
+                                    #labs(x=expression("Electrical Conductivity ["* mu ~"S/cm]"), y="Chlorid [mg/l]")+
+                                    stat_cor(label.x = 220,label.y = max(graphs[[station]]$cl)*.8) +
+                                    stat_regline_equation(label.x = 220,label.y = max(graphs[[station]]$cl)*.9)+
+                                    ggtitle(titles[station])+
+                                    annotate(geom="text",hjust = 0,size=3.5,fontface="italic",
+                                         x= c(max(graphs[[station]]$cond)*.9),
+                                         y=c(min(graphs[[station]]$cl)*1.2), 
+                                         label=c(paste("n = ",nrow(graphs[[station]]))))}
+    
+    
+    
+    setwd("C:/Users/Jakob/Desktop/paper sampling/plots/")
+    geplottet=grid.arrange(patchworkGrob(wrap_plots(regression_plot)  + plot_layout(ncol = 1) ), bottom =grid.text(expression("Electrical Conductivity ["*~ mu "S/cm]")) ,left="Chlorid [mg/l]")
+    
+    geplottet
+    ggsave(filename="cl-cond.png",plot = last_plot(),width=10, height=20, units="cm")
+    
+    
