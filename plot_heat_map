@@ -1,0 +1,169 @@
+###calculate mean matrix
+data_table=matrix(data=0,nrow = 21,ncol=6)
+for(measuring_station in 1:5){
+  for(parameter in 1:3){
+    for(year in 1:length(finalresults_diff[[measuring_station]][[1]][[1]][[1]])){ ####quick and dirty, to find out how many years of data there is
+      for(x in 1:6){
+        for(i in 1:21){
+          data_table[i,x]=log10(consecutive_diff[[measuring_station]][[x]][[i]][[parameter]][year])}}#log here
+      plot_data[[measuring_station]][[parameter]][[year]]=data_table}}}
+
+median_list=list()
+mean_df=list()
+for(measuring_station in 1:5){
+  median_list[[measuring_station]]=list()
+  mean_df[[measuring_station]]=list()
+  for(parameter in 1:3){
+    median_list[[measuring_station]][[parameter]]=apply(simplify2array(matrix_list[[measuring_station]][[parameter]]), 1:2, median,na.rm=T)
+    colnames(median_list[[measuring_station]][[parameter]])<- paste(1:length(intervalls))
+    rownames(median_list[[measuring_station]][[parameter]])<- paste(1:length(duration_days))
+    mean_df[[measuring_station]][[parameter]]=melt(median_list[[measuring_station]][[parameter]])
+    colnames(mean_df[[measuring_station]][[parameter]]) <- c("x", "y", "value")}}
+
+###give names
+stations=c("Mulde / Bad Düben","Elbe / Schmilka","Neiße / Görlitz","Lockwitzbach / MS6","Lockwitzbach / MS4")
+parameters=c("Nitrate","Chloride","Oxygen")
+names(median_list)=stations
+for(measuring_station in 1:5){
+  names(median_list[[measuring_station]])=parameters}
+
+###set up model for thresholds:
+models_lm=median_list
+opt_value=median_list
+parameters_modell=median_list
+modelled_data=mean_df
+r_squared=c()
+Estimate=c()
+x=c()
+y=c()
+for(measuring_station in 1:5){
+  for(parameter in 1:3){
+    dataframe_temp=mean_df[[measuring_station]][[parameter]] # got an issue with inf values solved here
+    data_without_inf= dataframe_temp[!is.infinite(dataframe_temp$value),] # and here
+    models_lm<- lm(value ~ x +log(y),data=data_without_inf)
+    data_lm=data_without_inf
+    data_lm$value<-models_lm$fitted.values
+    #print(summary(models_lm)[8])
+    r_squared=summary(models_lm)[8]
+    Estimate=summary(models_lm)$coefficients["(Intercept)", "Estimate"]
+    x=summary(models_lm)$coefficients["x", "Estimate"]
+    y=summary(models_lm)$coefficients["log(y)", "Estimate"]
+    parameters_modell[[measuring_station]][[parameter]]=rbind(Estimate,x,y,r_squared)
+    
+    data_test=filter(data_lm,data_lm$value>0)
+    data_test=data_test[order(data_test$value),]
+    data_test=data_test[1:4,]
+    data_test=data_test[order(data_test$x),] #fix shortest duration
+    data_test=data_test[order(-data_test$y),] #fix highest interval
+    opt_value[[measuring_station]][[parameter]]=data_test[1,]}} ##increase index to see more results
+
+###plotting heat map
+####summarize plots by parameter
+new_mean_df=list(list(list(),list(),list(),list(),list()),
+                 list(list(),list(),list(),list(),list()),
+                 list(list(),list(),list(),list(),list()))
+parameters_modell_new=new_mean_df
+opt_value_new=new_mean_df
+
+for(parameter in 1:3){
+  for(measuring_station in 1:5){
+    new_mean_df[[parameter]][[measuring_station]]=mean_df[[measuring_station]][[parameter]]
+    parameters_modell_new[[parameter]][[measuring_station]]=parameters_modell[[measuring_station]][[parameter]]
+    opt_value_new[[parameter]][[measuring_station]]=opt_value[[measuring_station]][[parameter]]}}
+
+
+##rearrange plots for have elbe first
+new_mean_df_temp=new_mean_df
+parameters_modell_new_temp=parameters_modell_new
+opt_value_new_temp=opt_value_new
+for(parameter in 1:3){
+  new_mean_df_temp[[parameter]][[1]]=new_mean_df[[parameter]][[2]]
+  new_mean_df_temp[[parameter]][[2]]=new_mean_df[[parameter]][[1]]
+  parameters_modell_new_temp[[parameter]][[1]]=parameters_modell_new[[parameter]][[2]]
+  parameters_modell_new_temp[[parameter]][[2]]=parameters_modell_new[[parameter]][[1]]
+  opt_value_new_temp[[parameter]][[1]]=opt_value_new[[parameter]][[2]]
+  opt_value_new_temp[[parameter]][[2]]=opt_value_new[[parameter]][[1]]}
+
+
+###issue with infs
+for(parameter in 1:3){
+  for(measuring_station in 1:5){
+    dataframe_temp=new_mean_df_temp[[parameter]][[measuring_station]] # got an issue with inf values solved here
+    dataframe_temp = dataframe_temp[!is.infinite(dataframe_temp$value),] # and here
+    new_mean_df[[parameter]][[measuring_station]]=dataframe_temp}}
+
+parameters_modell_new=parameters_modell_new_temp
+opt_value_new=opt_value_new_temp
+stations=c("Elbe / Schmilka","Mulde / Bad Düben","Neiße / Görlitz","Lockwitzbach / MS6","Lockwitzbach / MS4")
+
+
+###loglinear
+plots_median=new_mean_df
+for(measuring_station in 1:3){
+  for(parameter in 1:5){
+    #mean_df[[measuring_station]][[parameter]]
+    plots_median[[measuring_station]][[parameter]]=ggplot(data=new_mean_df[[measuring_station]][[parameter]],aes(x = x, y = y, fill = value)) +
+      geom_tile(color = "white",lwd = 1.5,linetype = 1) +   
+      geom_tile(data=opt_value_new[[measuring_station]][[parameter]],aes(x = x, y = y),show.legend = F,alpha=0,colour="black",lwd = 1.1)+
+      geom_text(aes(label = round(value,digits = 1)), color = "black", size = 2.5) +
+      labs(title = paste0(stations[[parameter]],"  (z = ",
+                          round(as.numeric(parameters_modell_new[[measuring_station]][[parameter]][3]),3)," \u00D7 log(y) + ",
+                          round(as.numeric(parameters_modell_new[[measuring_station]][[parameter]][2]),3)," \u00D7 x + ",
+                          round(as.numeric(parameters_modell_new[[measuring_station]][[parameter]][1]),3)," ; R² = ",
+                          round(as.numeric(parameters_modell_new[[measuring_station]][[parameter]][4]),2),")"))+
+      
+      {if(min(do.call("rbind",new_mean_df[[measuring_station]])[,3])<0){
+        scale_fill_gradientn("Performance (according to table 1): \n \n\n Horizontal Axis:\n Application duration in days (x) \n \n Vertical Axis:\n Return-interval of sensor installation\n in months (y)",colors=c("red","yellow","deepskyblue","blue"),
+                             values = rescale(c(min(do.call("rbind",new_mean_df[[measuring_station]])[,3]),
+                                                0,
+                                                max(do.call("rbind",new_mean_df[[measuring_station]])[,3])/2,
+                                                max(do.call("rbind",new_mean_df[[measuring_station]])[,3]))),
+                             guide = "colorbar",
+                             n.breaks=4,
+                             limits=c(min(do.call("rbind",new_mean_df[[measuring_station]])[,3]),
+                                      max(do.call("rbind",new_mean_df[[measuring_station]])[,3])))
+      }else{
+        scale_fill_gradientn("Performance (according to table 1): \n \n\n Horizontal Axis:\n Application duration in days (x) \n \n Vertical Axis:\n Return-interval of sensor installation\n in months (y)",colors=c("yellow","deepskyblue","blue"),
+                             values = rescale(c(0,
+                                                max(do.call("rbind",new_mean_df[[measuring_station]])[,3])/2,
+                                                max(do.call("rbind",new_mean_df[[measuring_station]])[,3]))),
+                             guide = "colorbar",
+                             n.breaks=4,
+                             limits=c(0,
+                                      max(do.call("rbind",new_mean_df[[measuring_station]])[,3])))} }+ ##double {} for if in ggplot2
+      
+      coord_fixed()+
+      theme_minimal()+
+      theme(axis.title.x = element_blank(),
+            axis.title.y = element_blank(),
+            plot.title = element_text(hjust = 0.5,size=11,face="italic"),
+            panel.grid.major = element_blank(), 
+            panel.grid.minor = element_blank(),
+            #legend.title = element_blank(),
+            legend.position="bottom")+
+      scale_y_continuous(breaks = seq(1,6,1))+
+      scale_x_continuous(breaks = seq(1,21,1))
+  }}
+
+for(measuring_station in 1:3){
+  a=wrap_plots(plots_median[[measuring_station]]) + guide_area() + plot_annotation(
+    title = parameters[[measuring_station]],
+    #caption = "300 model runs",
+    theme = theme(
+      plot.title = element_text(hjust = 0.05,face ="bold",size = 18), # 1 would be on right side
+      #plot.caption = element_text(hjust=.7)
+    )
+  ) +plot_layout(guides = "collect",ncol=2,heights = unit(c(4,4,4,2),"cm"),widths = unit(c(14,14,14,14),"cm")) 
+  
+  print(a)
+  
+  
+  setwd("C:/Users/Jakob/Desktop/paper sampling/plots/mean plots/ogwv/parameter/whole_day/")
+  
+  ggsave(filename=paste0(gsub("/","-",parameters[measuring_station]),"loglinear.png"),
+         
+         width=12,
+         height=8)
+  units="cm"
+  
+}
