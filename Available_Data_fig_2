@@ -1,12 +1,10 @@
 ###check for gaps
-
 load("C:/Users/Jakob/Desktop/paper sampling/jakob_300.RData")
 
 data_test=data
 for(i in 1:5){
   data_test[[i]]=cbind(data[[i]],data_Q[[i]])
   names(data_test[[i]])<-c("no3n_mg.l","cl_mg.l","oxygen_mg.l","discharge_m3.s")}
-
 
 gaps=list()
 results=list()
@@ -39,8 +37,6 @@ col_mean=do.call("rbind", col_mean) ##total mean
 col_max=list()
 for (i in 1:5){col_max[[i]]=do.call("rbind",results[[i]])}
 col_max=lapply(col_max, function(x){apply(x, MARGIN=c(2), max)}) ##max yearly missing data 
-
-
 
 #cross check
 test_xts=c()
@@ -142,11 +138,9 @@ g2 <- ggplot() +
         axis.text.x = element_text(size = 13)
   )
 
-
 ###export as plot with 1200*600 or bigger
 
 setwd("C:/Users/Jakob/Desktop/paper sampling/plots")
-
 
 ggsave(filename="available data_2.png",
        bg="white",
@@ -156,8 +150,6 @@ units="cm"
 
 
 dev.off()
-
-
 
 
 #####data for evaluation in the paper:
