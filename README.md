@@ -9,6 +9,6 @@ There is a function to simulate according to OGewV:
 
 Graphs for:
 
-- linear regression between chloride concentration and electrical conductivity
-- data availability with colors and parameters
-- heat map for the comparsion between grab sampling and STOM parameters 
+- linear regression between chloride concentration and electrical conductivity (plot_cl_cond_regression)
+- data availability with colors and parameters (plot_available_data)
+- heat map for the comparsion between grab sampling and STOM parameters (plot_heat_map) 
